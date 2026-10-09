@@ -7,3 +7,98 @@
 
 .brand{background:transparent;border:0;padding:0;text-align:left;color:var(--ink)}.hero h2{max-width:390px;word-break:keep-all}@media(max-width:760px){.hero h2{max-width:260px}}
 @media(max-width:760px){.sidebar nav button{white-space:nowrap;font-size:10px;padding:11px 7px}.match-row{color:#6f7c67}.section-heading p{color:#78836e}}
+
+/* Six doubles: simultaneous matches share a round, with a score for each court. */
+.auto-format-note{display:flex;align-items:flex-start;gap:10px;margin:0 22px 19px;padding:13px 15px;border:1px solid #e1ead7;border-radius:7px;background:#f5f8ed;color:#70815e;font-size:11px;line-height:1.8}
+.auto-format-note>svg{flex-shrink:0;margin-top:3px;color:#5c803e}
+.auto-format-note strong{display:block;color:#365c3f;font-size:11px;margin-bottom:3px}
+.competition-score{margin:0 22px 22px;padding:18px 20px;background:#f8faf4;border:1px solid #e6ecdf;border-radius:9px}
+.competition-score-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.competition-score-heading strong{font-size:13px;font-weight:600;color:#30533c}
+.competition-score-heading>span{font-size:9px;color:#879278;white-space:nowrap}
+.score-totals{display:grid;grid-template-columns:1fr 110px 1fr;align-items:center;text-align:center;gap:7px 12px;margin:18px 0}
+.score-totals .score-team-name{font-size:12px;color:#516744;font-weight:600}
+.score-totals .score-total-label{font-size:9px;letter-spacing:.5px;color:#9ca78c}
+.score-totals b{font-size:31px;font-weight:600;color:#214e36;line-height:1.3}
+.score-totals strong{font-size:18px;font-weight:500;color:#64804f}
+.score-totals>span{font-size:10px;color:#8c987f}
+.competition-score>p{font-size:10px;line-height:1.8;text-align:center;color:#7b896c;padding-top:13px;border-top:1px solid #e5ecd9}
+.round-list{padding:0 22px}
+.round-block{margin-bottom:22px}
+.round-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.round-heading>div{display:flex;align-items:center;gap:10px}
+.round-number{font-size:17px;font-weight:600;color:#72945c;border-right:1px solid #dfe7d8;padding-right:10px}
+.round-heading h3{font-size:12px;font-weight:600;color:#435e3a}
+.round-heading p{font-size:9px;color:#88947d;margin-top:4px}
+.round-heading>span{display:flex;align-items:center;gap:5px;color:#8c977f;font-size:10px;white-space:nowrap}
+.round-games{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.court-match{border:1px solid #e5eade;border-radius:8px;overflow:hidden;background:#fff}
+.court-match.finished{border-color:#d7e3c7;background:#fcfdf9}
+.court-match-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 12px 0}
+.court-match-heading>span:last-child{font-size:9px;color:#8a957c;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.category-pill{font-size:9px;font-weight:600;border-radius:4px;padding:4px 7px}
+.category-pill.mixed{background:#eef3e2;color:#718449}
+.category-pill.mens{background:#edf2f4;color:#657f89}
+.court-match-sides{display:grid;grid-template-columns:minmax(0,1fr) 46px minmax(0,1fr);align-items:center;gap:6px;text-align:center;padding:18px 9px}
+.court-match-sides>div:not(.score-display)>span{display:block;font-size:9px;color:#94a083;margin-bottom:8px;font-weight:400}
+.court-match-sides>div>strong{font-size:11px;font-weight:500;color:#697b59;line-height:1.8;display:block;word-break:keep-all;overflow-wrap:anywhere}
+.court-match-sides>.winner>strong{font-weight:700;color:#315d36}
+.court-match-sides .win{font-style:normal;font-size:7px;padding:2px 3px}
+.court-match-sides .score-display{font-size:19px;gap:6px}
+.court-match-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid #eef1e8;background:#fafbf7;padding:9px 12px;min-height:44px}
+.court-match-footer>span:first-child{font-size:9px;color:#91a07f}
+.court-match-footer .status{font-size:8px}
+.match-panel:has(.round-list)>.panel-footer{border-top:1px solid var(--line)}
+.player-info{min-width:0;flex:1}
+.player-info>span:first-child{display:block;line-height:1.5}
+.player-details{display:block;color:#8c987f;font-size:9px;line-height:1.7;margin-top:3px;word-break:keep-all}
+.roster>div{align-items:flex-start}
+.roster .player-avatar{margin-top:2px;flex-shrink:0}
+.roster small{align-self:center}
+.player-fields{display:grid;gap:13px;margin-bottom:24px}
+.player-field{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.75fr) minmax(0,1.2fr);gap:10px;border:1px solid #dfe6d7;border-radius:8px;padding:12px;margin:0;min-width:0;background:#f7f9f3}
+.player-field legend{font-size:11px;color:#698457;font-weight:600;padding:0 6px}
+.dialog .player-field label{font-size:10px;margin-bottom:0;gap:6px;min-width:0;color:#8b967e}
+.dialog .player-field input,.dialog .player-field select{padding:10px 8px;font-size:12px}
+.settings-format-description{padding:14px 15px;background:#edf4e6;border-radius:7px;margin:0 0 18px;color:#708560;font-size:11px;line-height:1.8}
+.settings-format-description strong{color:#48653b;font-size:12px}
+.settings-format-description p{margin-top:5px}
+.round-time-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.dialog .round-time-fields label{font-size:11px;min-width:0}
+.dialog .round-time-fields input{padding:10px 7px;font-size:13px}
+.result-context{display:inline-block;padding:7px 10px;border-radius:5px;font-size:11px;color:#60784c;background:#ecf3e3;margin:-7px 0 16px}
+@media(min-width:1051px) and (max-width:1300px){.round-games{grid-template-columns:1fr}.court-match-sides>div>strong{font-size:12px}.court-match-sides{padding:17px 20px}}
+@media(max-width:760px){
+  .auto-format-note{margin:0 15px 16px;padding:11px 12px;font-size:10px}
+  .auto-format-note strong{font-size:10px}
+  .competition-score{margin:0 15px 20px;padding:15px}
+  .competition-score-heading{gap:8px}
+  .competition-score-heading strong{font-size:11px;line-height:1.6}
+  .competition-score-heading>span{font-size:8px}
+  .score-totals{grid-template-columns:1fr 90px 1fr;gap:6px 8px;margin:15px 0}
+  .score-totals b{font-size:28px}
+  .score-totals strong{font-size:17px}
+  .competition-score>p{font-size:9px}
+  .round-list{padding:0 15px}
+  .round-heading p{font-size:8px}
+  .round-heading>span{font-size:9px}
+  .round-block{margin-bottom:21px}
+  .court-match-heading{padding:13px 14px 0}
+  .court-match-sides{padding:17px 15px;grid-template-columns:minmax(0,1fr) 50px minmax(0,1fr)}
+  .court-match-sides>div>strong{font-size:12px}
+  .court-match-sides>div:not(.score-display)>span{font-size:10px}
+  .court-match-footer{padding:10px 14px}
+  .court-match-footer .result-button{font-size:10px;padding:7px 10px}
+  .player-details{font-size:8px;line-height:1.7;letter-spacing:-.035em}
+  .roster>div{gap:7px}
+  .roster .player-avatar{width:24px;height:24px;font-size:9px}
+  .roster small{font-size:7px}
+  .dialog .player-field input,.dialog .player-field select{font-size:16px}
+  .round-time-fields{grid-template-columns:1fr}
+  .dialog .round-time-fields label{display:grid;grid-template-columns:1fr 1.2fr;align-items:center;font-size:12px;margin-bottom:7px}
+  .dialog .round-time-fields input{font-size:16px;padding:10px}
+  .round-time-fields+.help{margin-top:5px}
+}
+@media(max-width:650px){.round-games{grid-template-columns:1fr;gap:9px}.round-heading h3{font-size:12px}.round-heading p{font-size:9px}}
+@media(max-width:500px){.player-field{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:12px}.player-field>label:first-of-type{grid-column:1/-1}.dialog .player-field label{font-size:11px}.player-fields{gap:17px}}
+@media print{.round-block{break-inside:avoid}.round-games{grid-template-columns:repeat(2,minmax(0,1fr))}.player-details{color:#555}.result-button,.team-edit{display:none!important}}
