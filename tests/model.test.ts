@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {initialEvent,applyChange,summary,normalizeEvent,generateSixGames,genderLabel,gradeLabel} from '../app/model.ts';
+import {initialEvent,applyChange,summary,normalizeEvent,generateSixGames,genderLabel,gradeLabel,newAnnouncement,playerDirectory,playerStandings} from '../app/model.ts';
 import type {EventData,Side,PlayerMeta} from '../app/model.ts';
 const roster=['선수1','선수2','선수3','선수4'];
 const order=(side:string)=>({type:'order',side,roster,pairs:[[0,1],[2,3],[0,2]]});
@@ -207,3 +207,78 @@ test('courts and round times are validated, while unassigned courts are allowed'
  assert.doesNotThrow(()=>applyChange(e,{type:'settings',value:{...e,court:'',secondaryCourt:'',roundTimes:['','','']}},'admin'));
  assert.throws(()=>applyChange(e,{type:'settings',value:e},'a'));
 });
+test('announcements contain no players, fixtures or false winner',()=>{
+ const e=newAnnouncement({date:'2026-10-28'});
+ assert.equal(e.format,0);assert.deepEqual(e.games,[]);assert.equal(summary(e).champion,'');
+ assert.ok(e.rosters.a.concat(e.rosters.b).every(n=>!n));assert.ok(e.playerMeta.a.every(m=>!m.gender&&!m.grade));
+ assert.deepEqual(playerStandings([{id:'next',event:e,revision:0}]),[]);
+ assert.throws(()=>applyChange(e,order('a'),'a'));assert.throws(()=>applyChange(e,{type:'lock',locked:true},'admin'));
+});
+test('settings validate real dates and allow undecided format',()=>{
+ const e=newAnnouncement({date:'2026-10-28'});
+ for(const date of ['', '2026-02-29','2026-04-31','0000-01-01'])assert.throws(()=>applyChange(e,{type:'settings',value:{...e,date}},'admin'));
+ assert.equal(applyChange(e,{type:'settings',value:{...e,date:'2028-02-29'}},'admin').date,'2028-02-29');
+ assert.deepEqual(applyChange(six(),{type:'settings',value:{...six(),format:0}},'admin').games,[]);
+});
+test('six fixtures wait for both complete valid rosters',()=>{
+ let e=newAnnouncement({date:'2026-10-28'});
+ e=applyChange(e,{type:'settings',value:{...e,format:6}},'admin');
+ e=applyChange(e,{type:'roster',side:'a',roster:['가','','',''],playerMeta:initialEvent().playerMeta.a},'a');
+ assert.deepEqual(e.games,[]);assert.equal(e.locked,false);
+ e=applyChange(e,{type:'roster',side:'a',roster,playerMeta:initialEvent().playerMeta.a},'a');assert.deepEqual(e.games,[]);
+ e=applyChange(e,{type:'roster',side:'b',roster:roster.map(n=>'상대'+n),playerMeta:initialEvent().playerMeta.b},'b');
+ assert.equal(e.games.length,6);assert.equal(e.locked,true);
+ e=applyChange(e,{type:'roster',side:'b',roster:['','','',''],playerMeta:e.playerMeta.b},'b');
+ assert.deepEqual(e.games,[]);assert.equal(e.locked,false);
+});
+test('legacy IDs are deterministic and event-scoped without changing scores',()=>{
+ const {playerIds,...raw}=result(six(),0,6,3);
+ const a=normalizeEvent(raw,'first'),b=normalizeEvent(raw,'other');
+ assert.equal(a.playerIds.a[0],'legacy-first-a-0');assert.equal(b.playerIds.a[0],'legacy-other-a-0');
+ assert.deepEqual(a.playerIds,normalizeEvent(raw,'first').playerIds);assert.deepEqual(a.games,raw.games);
+});
+test('legacy roster reorders preserve identity but explicit blanks create a new person',()=>{
+ const e=six(),positions=[1,0,2,3];
+ const changed=applyChange(e,{type:'roster',side:'a',roster:positions.map(i=>e.rosters.a[i]),playerMeta:positions.map(i=>e.playerMeta.a[i])},'a');
+ assert.deepEqual(changed.playerIds.a,positions.map(i=>e.playerIds.a[i]));
+ const newer=applyChange(e,{...rosterAction(e,'a'),playerIds:['',...e.playerIds.a.slice(1)]},'a');
+ assert.notEqual(newer.playerIds.a[0],e.playerIds.a[0]);
+ const scored=result(e,0,6,3);
+ assert.throws(()=>applyChange(scored,{...rosterAction(scored,'a'),playerIds:['',...e.playerIds.a.slice(1)]},'admin'));
+});
+test('duplicate IDs are rejected within and across teams',()=>{
+ const e=six();
+ for(const id of [e.playerIds.a[1],e.playerIds.b[0]])assert.throws(()=>applyChange(e,{...rosterAction(e,'a'),playerIds:[id,...e.playerIds.a.slice(1)]},'admin'));
+});
+test('returning players accumulate by ID and score corrections and resets recalculate',()=>{
+ const first=result(six(),0,6,3);let next=structuredClone(first);next.date='2026-10-28';next=result(next,0,4,6);
+ const records=[{id:'first',event:first,revision:1},{id:'next',event:next,revision:1}];
+ const get=()=>playerStandings(records).find(p=>p.id===first.playerIds.a[0])!;
+ assert.deepEqual([get().events,get().played,get().wins,get().losses,get().gamesFor,get().gamesAgainst],[2,2,1,1,10,9]);
+ records[1].event=result(next,0,6,2);assert.equal(get().wins,2);assert.equal(get().gamesFor,12);
+ records[1].event=applyChange(next,{type:'result',index:0,clear:true},'admin');assert.equal(get().played,1);assert.equal(get().events,1);
+ assert.equal(first.games[0].scoreA,'6');
+});
+test('directory preserves snapshots and separates same names with different identities',()=>{
+ const first=six(),next=structuredClone(first);next.date='2026-10-28';next.playerMeta.a[0].grade='2';
+ const other=normalizeEvent({...first,playerIds:undefined},'other');
+ const records=[{id:'first',event:first,revision:0},{id:'next',event:next,revision:0},{id:'other',event:other,revision:0}];
+ const people=playerDirectory(records);assert.equal(people.length,16);assert.equal(people.filter(p=>p.name===first.rosters.a[0]).length,2);
+ assert.equal(people.find(p=>p.id===first.playerIds.a[0])!.grade,'2');assert.equal(first.playerMeta.a[0].grade,'1');
+ assert.ok(playerStandings(records).every(p=>p.winRate===null));
+});
+test('stats ignore malformed and duplicate result snapshots',()=>{
+ const e=result(six(),0,6,3),r={id:'first',event:e,revision:1};
+ assert.equal(playerStandings([r,r]).find(p=>p.id===e.playerIds.a[0])!.played,1);
+ for(const change of [{scoreA:''},{winner:'b'},{a:[0,0]},{b:[0]},{a:[0,8]}]){
+  const event=structuredClone(e);Object.assign(event.games[0],change);
+  assert.ok(playerStandings([{...r,event}]).every(p=>p.played===0));
+ }
+ const cleared=applyChange(e,{type:'result',index:0,clear:true},'admin');
+ assert.ok(playerStandings([r,{...r,event:cleared,revision:2}]).every(p=>p.played===0));
+});
+test('manual orders require complete participants after a partial roster save',()=>{
+ const e=applyChange(initialEvent(),{type:'roster',side:'a',roster:['한 명','','','']},'a');
+ assert.throws(()=>applyChange(e,{...order('a'),roster:e.rosters.a},'a'));
+});
+

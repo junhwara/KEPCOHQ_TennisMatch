@@ -1,11 +1,35 @@
-import { env } from 'cloudflare:workers';
-import { initialEvent, normalizeEvent, applyChange, type EventData } from '../../model';
+import { playerDirectory } from '../../model';
+import { json, getRole, linksFor, readEvent, readRecords, runtime, visible, readAction, validEventId, HttpError, errorResponse, validatedChange } from './store';
 export const dynamic='force-dynamic';
-const runtime=()=>env as unknown as {DB:D1Database;ADMIN_KEY?:string;INITIAL_ROSTER?:string};
-const json=(v:unknown,status=200)=>Response.json(v,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
-async function roleKey(role:string){const secret=runtime().ADMIN_KEY;if(!secret)return '';if(role==='admin')return secret;const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);const b=await crypto.subtle.sign('HMAC',k,new TextEncoder().encode('captain-'+role));return Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('');}
-async function getRole(req:Request){const token=req.headers.get('authorization')?.replace(/^Bearer /,'');if(!token)return 'viewer';for(const r of ['admin','a','b'])if(token===await roleKey(r))return r;return 'viewer';}
-async function read(){const db=runtime().DB;if(!db)throw Error('데이터 저장소가 준비되지 않았습니다.');let row=await db.prepare('SELECT data, revision FROM events WHERE id = ?').bind('first').first<{data:string;revision:number}>();if(!row){let roster;try{roster=JSON.parse(runtime().INITIAL_ROSTER||'null');}catch{}const e=initialEvent(roster||undefined);await db.prepare('INSERT OR IGNORE INTO events (id,data,revision) VALUES (?,?,0)').bind('first',JSON.stringify(e)).run();row=await db.prepare('SELECT data, revision FROM events WHERE id = ?').bind('first').first<{data:string;revision:number}>();}return {event:normalizeEvent(JSON.parse(row!.data)),revision:row!.revision};}
-function visible(e:EventData,role:string){const n=structuredClone(e);if(n.format!==6&&!n.locked&&role!=='admin')for(const s of ['a','b'] as const)if(role!==s)n.games.forEach(g=>g[s]=[]);return n;}
-export async function GET(req:Request){try{const role=await getRole(req);const {event,revision}=await read();const links=role==='admin'?{a:await roleKey('a'),b:await roleKey('b')}:undefined;return json({event:visible(event,role),revision,role,links});}catch{return json({error:'대회 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'},503);}}
-export async function POST(req:Request){try{if(req.headers.get('origin')&&req.headers.get('origin')!==new URL(req.url).origin)return json({error:'허용되지 않은 요청입니다.'},403);if(!req.headers.get('content-type')?.includes('application/json'))return json({error:'JSON 요청이 필요합니다.'},415);const role=await getRole(req);if(role==='viewer')return json({error:'전용 관리 링크가 필요합니다.'},403);const body=await req.text();if(body.length>16000)return json({error:'입력 내용이 너무 큽니다.'},413);const a=JSON.parse(body);const {event,revision}=await read();if(a.revision!==revision)return json({error:'다른 사용자가 정보를 변경했습니다. 새로고침 후 다시 입력해주세요.'},409);const next=applyChange(event,a,role);const result=await runtime().DB.prepare('UPDATE events SET data=?, revision=revision+1 WHERE id=? AND revision=?').bind(JSON.stringify(next),'first',revision).run();if(!result.meta.changes)return json({error:'다른 변경과 겹쳤습니다. 새로고침 후 다시 시도해주세요.'},409);return json({event:visible(next,role),revision:revision+1,role});}catch(e){return json({error:e instanceof Error?e.message:'저장하지 못했습니다.'},400);}}
+export async function GET(req:Request) {
+ try {
+  const role=await getRole(req);
+  // Legacy links and open v0.2 browser tabs continue to address the original event.
+  const id=validEventId(new URL(req.url).searchParams.get('eventId')??'first');
+  const record=await readEvent(id);
+  return json({eventId:id,event:visible(record.event,role),revision:record.revision,role,links:await linksFor(role)});
+ } catch(error) {return errorResponse(error);}
+}
+export async function POST(req:Request) {
+ try {
+  const {role,action}=await readAction(req);
+  const id=validEventId(action.eventId??'first');
+  const {event,revision}=await readEvent(id);
+  if(action.revision!==revision)throw new HttpError('다른 사용자가 정보를 변경했습니다. 새로고침 후 다시 입력해주세요.',409);
+  if((action.type==='roster'||action.type==='order')&&action.playerIds!==undefined) {
+   if(!Array.isArray(action.playerIds)||action.playerIds.length!==4||action.playerIds.some((id:unknown)=>typeof id!=='string'))throw new HttpError('선수 선택을 확인해주세요.',400);
+   const directory=playerDirectory(await readRecords());
+   for(let index=0;index<4;index++) {
+    const playerId=action.playerIds[index];
+    if(!playerId)continue;
+    const player=directory.find(p=>p.id===playerId);
+    if(!player||player.name!==action.roster?.[index]?.trim())throw new HttpError('기존 선수는 목록에서 선택해주세요. 다른 선수는 새 선수로 등록해주세요.',400);
+   }
+  }
+  const next=validatedChange(event,action,role);
+  const result=await runtime().DB.prepare('UPDATE events SET data=?,revision=revision+1 WHERE id=? AND revision=?')
+   .bind(JSON.stringify(next),id,revision).run();
+  if(!result.meta.changes)throw new HttpError('다른 변경과 겹쳤습니다. 새로고침 후 다시 시도해주세요.',409);
+  return json({eventId:id,event:visible(next,role),revision:revision+1,role,links:await linksFor(role)});
+ } catch(error) {return errorResponse(error);}
+}
